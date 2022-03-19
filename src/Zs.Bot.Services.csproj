@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+      <PackageId>Zs.Bot.Services</PackageId>
+      <Version>6.0.1</Version>
+      <Authors>zuev56 (Sergei Zuev)</Authors>
+      <Company>zuev56 (Sergei Zuev)</Company>
+      <RepositoryUrl>https://github.com/zuev56/Zs.Bot.Services</RepositoryUrl>
+      <PackageProjectUrl>https://www.nuget.org/packages/Zs.Bot.Services</PackageProjectUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="DbModel\**" />
+    <EmbeddedResource Remove="DbModel\**" />
+    <None Remove="DbModel\**" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>Zs.Bot.UnitTests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="Zs.Bot.Data" Version="6.0.1" />
+    <PackageReference Include="Zs.Common.Services" Version="6.0.2" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+  </ItemGroup>
+
+</Project>
