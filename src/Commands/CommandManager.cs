@@ -17,7 +17,7 @@ using Zs.Common.Enums;
 using Zs.Common.Exceptions;
 using Zs.Common.Extensions;
 using Zs.Common.Models;
-using Zs.Common.Services.Abstractions;
+using Zs.Common.Services.Shell;
 
 namespace Zs.Bot.Services.Commands
 {
@@ -116,7 +116,7 @@ namespace Zs.Bot.Services.Commands
         {
             // TODO: Remove code duplicates with RunSqlCommandAsync
 
-            ServiceResult<string> cmdExecResult = null;
+            Result<string> cmdExecResult = null;
 
             var dbUser = await _usersRepo.FindByIdAsync(botCommand.FromUserId).ConfigureAwait(false);
             if (dbUser is null)
@@ -145,23 +145,16 @@ namespace Zs.Bot.Services.Commands
                     ex.Data.Add("BotCommand", botCommand);
                     _logger?.LogError(ex, $"System command execution error: {botCommand}");
 
-                    cmdExecResult.AddMessage("System command execution: general error", InfoMessageType.Error);
+                    cmdExecResult = Result.Fail<string>(Fault.Unknown.SetMessage("System command execution: general error"));
                 }
             }
             else
             {
-                cmdExecResult = ServiceResult<string>.Error("You have no rights to execute this command");
+                cmdExecResult = Result.Fail<string>(Fault.Unknown.SetMessage("You have no rights to execute this command"));
                 _logger?.LogWarning($"{dbUser.Name} has no rights to execute {botCommand}");
             }
 
-            var sbResult = new StringBuilder();
-            
-            if (cmdExecResult.Messages.Any())
-                sbResult.AppendLine("Messages:").AppendLine(cmdExecResult.JoinMessages());
-            if (!string.IsNullOrWhiteSpace(cmdExecResult.Value))
-                sbResult.AppendLine("Output:").AppendLine(cmdExecResult.Value);
-            
-            return sbResult.ToString();
+            return cmdExecResult.Value;
         }
 
         /// <summary>
@@ -188,7 +181,6 @@ namespace Zs.Bot.Services.Commands
                     var userHasRights = (await GetPermissionsArrayAsync(dbUser.UserRoleId).ConfigureAwait(false))
                         .Any(p => p.ToUpperInvariant() == "ALL"
                                || string.Equals(p, dbCommand.Group, StringComparison.InvariantCultureIgnoreCase));
-
 
                     if (userHasRights)
                     {

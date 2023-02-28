@@ -3,10 +3,9 @@ using System.Threading.Tasks;
 using Xunit;
 using Zs.Bot.Data.Abstractions;
 using Zs.Bot.Data.Factories;
-using Zs.Bot.Data.Models;
 using Zs.Bot.Services.Commands;
 using Zs.Common.Abstractions;
-using Zs.Common.Services.Abstractions;
+using Zs.Common.Services.Shell;
 
 namespace Zs.Bot.UnitTests
 {
