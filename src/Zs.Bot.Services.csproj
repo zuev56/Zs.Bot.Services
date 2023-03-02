@@ -2,20 +2,17 @@
 
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
-      <PackageId>Zs.Bot.Services</PackageId>
-      <Version>7.0.0-preview-1</Version>
-      <Authors>zuev56 (Sergei Zuev)</Authors>
-      <Company>zuev56 (Sergei Zuev)</Company>
-      <RepositoryUrl>https://github.com/zuev56/Zs.Bot.Services</RepositoryUrl>
-      <PackageProjectUrl>https://www.nuget.org/packages/Zs.Bot.Services</PackageProjectUrl>
+    <Nullable>enable</Nullable>
+    <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+    <PublishTrimmed>true</PublishTrimmed>
+    <PackageId>Zs.Bot.Services</PackageId>
+    <Version>7.0.0</Version>
+    <Authors>zuev56 (Sergei Zuev)</Authors>
+    <Company>zuev56 (Sergei Zuev)</Company>
+    <RepositoryUrl>https://github.com/zuev56/Zs.Bot.Services</RepositoryUrl>
+    <PackageProjectUrl>https://www.nuget.org/packages/Zs.Bot.Services</PackageProjectUrl>
   </PropertyGroup>
 
-  <ItemGroup>
-    <Compile Remove="DbModel\**" />
-    <EmbeddedResource Remove="DbModel\**" />
-    <None Remove="DbModel\**" />
-  </ItemGroup>
-  
   <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
       <_Parameter1>Zs.Bot.UnitTests</_Parameter1>
@@ -23,8 +20,8 @@
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Include="Zs.Bot.Data" Version="6.0.1" />
-    <PackageReference Include="Zs.Common.Services" Version="7.0.0-preview-1" />
+    <PackageReference Include="Zs.Bot.Data" Version="6.0.8" />
+    <PackageReference Include="Zs.Common.Services" Version="7.0.0" />
   </ItemGroup>
   
   <ItemGroup>
