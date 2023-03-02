@@ -6,6 +6,6 @@ namespace Zs.Bot.Services.Commands;
 
 public interface ICommandManager
 {
-    event EventHandler<CommandResult> CommandCompleted;
+    event EventHandler<CommandResult>? CommandCompleted;
     Task<bool> TryEnqueueCommandAsync(Message text);
 }

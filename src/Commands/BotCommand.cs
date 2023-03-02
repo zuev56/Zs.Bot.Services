@@ -25,7 +25,7 @@ public sealed class BotCommand
     {
         ArgumentNullException.ThrowIfNull(message);
 
-        if (!IsCommand(message.Text))
+        if (message.Text == null || !IsCommand(message.Text))
         {
             throw new ArgumentException("The message is not a command for a bot");
         }
@@ -76,11 +76,11 @@ public sealed class BotCommand
 
         if (isCommand && !string.IsNullOrWhiteSpace(botName) && message.Contains('@'))
         {
-            var messageWithoutCommand = message.Substring(message.IndexOf('@') + 1);
-            var destinationBotName = messageWithoutCommand
-                .Substring(0, messageWithoutCommand.Contains(' ')
-                    ? messageWithoutCommand.IndexOf(' ')
-                    : message.Length - message.IndexOf('@') - 1);
+            var messageWithoutCommand = message[(message.IndexOf('@') + 1)..];
+            var botNameEndIndex = messageWithoutCommand.Contains(' ')
+                ? messageWithoutCommand.IndexOf(' ')
+                : message.Length - message.IndexOf('@') - 1;
+            var destinationBotName = messageWithoutCommand[..botNameEndIndex];
 
             return botName == destinationBotName;
         }
@@ -133,7 +133,6 @@ public sealed class BotCommand
             .Replace("-", "")
             .Replace("=", "")
             .Trim());
-
 
         // Заменяем в массиве индексы на их значения
         for (var i = 0; i < words.Count; i++)

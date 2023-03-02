@@ -33,7 +33,6 @@ public sealed class CommandManager : ICommandManager
 
     public event EventHandler<CommandResult>? CommandCompleted;
 
-
     public CommandManager(
         ICommandsRepository commandsRepo,
         IUserRolesRepository userRolesRepo,
@@ -62,7 +61,7 @@ public sealed class CommandManager : ICommandManager
         {
             ArgumentNullException.ThrowIfNull(message);
 
-            if (!BotCommand.IsCommand(message.Text))
+            if (message.Text == null || !BotCommand.IsCommand(message.Text))
             {
                 return false;
             }
