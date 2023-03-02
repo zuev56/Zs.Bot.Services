@@ -1,17 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Zs.Bot.Services.Exceptions
+namespace Zs.Bot.Services.Exceptions;
+
+public sealed class OddNumberOfQuotesException : Exception
 {
-    public class OddNumberOfQuotesException : Exception
+    public OddNumberOfQuotesException()
+        : base("There must be an even number of quotes")
     {
-        public OddNumberOfQuotesException()
-            : base("Кавычек должно быть чётное количество!")
-        {
-            
-        }
     }
 }

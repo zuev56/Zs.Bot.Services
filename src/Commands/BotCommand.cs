@@ -4,119 +4,110 @@ using System.Linq;
 using Zs.Bot.Data.Models;
 using Zs.Bot.Services.Exceptions;
 
-namespace Zs.Bot.Services.Commands
+namespace Zs.Bot.Services.Commands;
+
+public sealed class BotCommand
 {
-    /// <summary> A command for a bot </summary>
-    public sealed class BotCommand
+    public int FromUserId { get; private set; }
+    public int ChatIdForAnswer { get; private init; }
+    public string Name { get; private init; } = null!;
+    public string NameWithoutSlash => Name[1..];
+    public string? TargetBotName { get; private init; }
+    public List<object> Parameters { get; } = new ();
+    public bool IsKnown { get; set; }
+
+    private BotCommand()
     {
-        public int FromUserId { get; private set; }
-        public int ChatIdForAnswer { get; private set; }
-        public string Name { get; private set; }
-        public string NameWithoutSlash => Name.Substring(1);
-        public string TargetBotName { get; private set; }
-        public List<object> Parametres { get; set; }
-        public bool IsKnown { get; set; }
+    }
 
-        private BotCommand()
+    /// <summary> Create <see cref="BotCommand"/> from <see cref="Message"/> </summary>
+    public static BotCommand GetCommandFromMessage(Message message)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+
+        if (!IsCommand(message.Text))
         {
+            throw new ArgumentException("The message is not a command for a bot");
         }
 
-        /// <summary> Create <see cref="BotCommand"/> from <see cref="Message"/> </summary>
-        public static BotCommand GetCommandFromMessage(Message message)
+        if (message.Text.Count(static c => c == '"') % 2 != 0)
         {
-            try
-            {
-                if (message is null)
-                    throw new ArgumentNullException(nameof(message));
-
-                if (IsCommand(message.Text))
-                {
-                    if (message.Text.Count(c => c == '"') % 2 != 0)
-                    {
-                        var aex = new OddNumberOfQuotesException();
-                        aex.Data.Add("Message", message);
-                        throw aex;
-                    }
-
-                    var messageWords = MessageSplitter(message.Text);
-
-                    string commandName = messageWords[0].Replace("_", "\\_").Trim();
-                    string targetBotName = null;
-
-                    if (commandName.Contains('@'))
-                    {
-                        var commandNameWithTargetBotName = commandName;
-                        int indexOfAt = commandNameWithTargetBotName.IndexOf('@');
-
-                        commandName = commandNameWithTargetBotName.Substring(0, indexOfAt);
-                        targetBotName = commandNameWithTargetBotName.Substring(indexOfAt + 1);
-                    }
-
-                    messageWords.RemoveAt(0);
-
-                    return new BotCommand()
-                    {
-                        Name = commandName.ToLower(),
-                        TargetBotName = targetBotName,
-                        FromUserId = message.UserId,
-                        ChatIdForAnswer = message.ChatId,
-                        Parametres = messageWords.Cast<object>().ToList(),
-                        IsKnown = false
-                    };
-                }
-                else
-                    throw new ArgumentException("Сообщение не является командой для бота");
-            }
-            catch (Exception ex)
-            {
-                throw;
-            }
+            var oddNumberOfQuotesException = new OddNumberOfQuotesException();
+            oddNumberOfQuotesException.Data.Add("Message", message);
+            throw oddNumberOfQuotesException;
         }
 
-        /// <summary> Check if message is <see cref="BotCommand"/> </summary>
-        public static bool IsCommand(string message, string botName = null)
+        var messageWords = MessageSplitter(message.Text);
+        var commandName = messageWords[0].Replace("_", "\\_").Trim().ToLower();
+        var targetBotName = default(string);
+
+        if (commandName.Contains('@'))
         {
-            var text = message?.Trim();
-            var isCommand = text?.Length > 1
-                         && text[0] == '/'
-                         && char.IsLetterOrDigit(text[1]);
+            var commandNameWithTargetBotName = commandName;
+            var indexOfAt = commandNameWithTargetBotName.IndexOf('@');
 
-            if (isCommand && !string.IsNullOrWhiteSpace(botName) && message.Contains('@'))
-            {
-                var messageWithoutCommand = message.Substring(message.IndexOf('@') + 1);
-                var destinationBotName = messageWithoutCommand
-                    .Substring(0, messageWithoutCommand.Contains(' ')
-                                ? messageWithoutCommand.IndexOf(' ')
-                                : message.Length - message.IndexOf('@') - 1);
-
-                return botName == destinationBotName;
-            }
-
-            return isCommand;
+            commandName = commandNameWithTargetBotName[..indexOfAt];
+            targetBotName = commandNameWithTargetBotName[(indexOfAt + 1)..];
         }
 
-        private static List<string> MessageSplitter(string argumentsLine)
+        messageWords.RemoveAt(0);
+
+        var botCommand = new BotCommand
         {
-            // TODO: need refactoring
+            Name = commandName,
+            TargetBotName = targetBotName,
+            FromUserId = message.UserId,
+            ChatIdForAnswer = message.ChatId,
+            IsKnown = false
+        };
 
-            // Example: /cmd arg1 "arg 2", arg3;"arg4"
+        var parameters = messageWords.Cast<object>();
+        botCommand.Parameters.AddRange(parameters);
+        return botCommand;
+    }
 
-            // Сначала выделяем аргументы в кавычках в отдельную группу <индекс, значение>
-            // а на их место вставляем заглушку в формате <<индекс>>
-            var quotedArgs = new Dictionary<int, string>();
+    /// <summary> Check if message is <see cref="BotCommand"/> </summary>
+    public static bool IsCommand(string message, string? botName = null)
+    {
+        ArgumentNullException.ThrowIfNull(message);
 
-            int begIndex = -1;
-            for (int i = 0; i < argumentsLine.Length; i++)
+        var text = message.Trim();
+        var isCommand = text.Length > 1 && text[0] == '/' && char.IsLetterOrDigit(text[1]);
+
+        if (isCommand && !string.IsNullOrWhiteSpace(botName) && message.Contains('@'))
+        {
+            var messageWithoutCommand = message.Substring(message.IndexOf('@') + 1);
+            var destinationBotName = messageWithoutCommand
+                .Substring(0, messageWithoutCommand.Contains(' ')
+                    ? messageWithoutCommand.IndexOf(' ')
+                    : message.Length - message.IndexOf('@') - 1);
+
+            return botName == destinationBotName;
+        }
+
+        return isCommand;
+    }
+
+    private static List<string> MessageSplitter(string argumentsLine)
+    {
+        // Example: /cmd arg1 "arg 2", arg3;"arg4"
+
+        // Сначала выделяем аргументы в кавычках в отдельную группу <индекс, значение>
+        // а на их место вставляем заглушку в формате <<индекс>>
+        var quotedArgs = new Dictionary<int, string>();
+
+        var begIndex = -1;
+        for (var i = 0; i < argumentsLine.Length; i++)
+        {
+            switch (argumentsLine[i])
             {
                 // Начало составного аргумента
-                if (argumentsLine[i] == '"' && begIndex == -1)
-                {
+                case '"' when begIndex == -1:
                     begIndex = i;
-                }
+                    break;
                 // Дошли до конца составного аргумента
-                else if (argumentsLine[i] == '"' && begIndex > -1)
-                {
-                    // Добавляем значение в список 
+                case '"' when begIndex > -1:
+                    // Добавляем значение в список
                     quotedArgs.Add(quotedArgs.Count, argumentsLine.Substring(begIndex + 1, i - begIndex - 1));
 
                     // Заменяем значение в строке аргументов на индекс
@@ -125,41 +116,42 @@ namespace Zs.Bot.Services.Commands
 
                     i = begIndex;
                     begIndex = -1;
-                }
+                    break;
             }
-
-            // Обрабатываем строку с аргументами, будто там нет составных значений
-            var words = argumentsLine.Replace(',', ' ')
-                                     .Replace(';', ' ').Trim()
-                                     .Split(' ').ToList();
-
-            words.RemoveAll(w => w.Trim() == "");
-
-            // Убираем лишние символы из простых аргументов
-            words.ForEach(w => w = w.Replace(",", "")
-                                    .Replace(";", "")
-                                    .Replace("-", "")
-                                    .Replace("=", "")
-                                    .Trim());
-
-
-            // Заменяем в массиве индексы на их значения
-            for (int i = 0; i < words.Count; i++)
-            {
-                // Получаем временный индекс
-                int mapIndex = -1;
-                if (words[i].Contains("<[<") && words[i].Contains(">]>"))
-                {
-                    mapIndex = int.Parse(words[i].Replace("<[<", "").Replace(">]>", ""));
-
-                    // Присваиваем значение, соответствующее этому индексу
-                    words[i] = quotedArgs[mapIndex];
-                }
-            }
-
-            return words;
         }
 
-        public override string ToString() => Name;
+        // Обрабатываем строку с аргументами, будто там нет составных значений
+        var words = argumentsLine.Replace(',', ' ')
+            .Replace(';', ' ').Trim()
+            .Split(' ').ToList();
+
+        words.RemoveAll(static w => w.Trim() == "");
+
+        // Убираем лишние символы из простых аргументов
+        words.ForEach(w => w = w.Replace(",", "")
+            .Replace(";", "")
+            .Replace("-", "")
+            .Replace("=", "")
+            .Trim());
+
+
+        // Заменяем в массиве индексы на их значения
+        for (var i = 0; i < words.Count; i++)
+        {
+            // Получаем временный индекс
+            if (!words[i].Contains("<[<") || !words[i].Contains(">]>"))
+            {
+                continue;
+            }
+
+            var mapIndex = int.Parse(words[i].Replace("<[<", "").Replace(">]>", ""));
+
+            // Присваиваем значение, соответствующее этому индексу
+            words[i] = quotedArgs[mapIndex];
+        }
+
+        return words;
     }
+
+    public override string ToString() => Name;
 }
