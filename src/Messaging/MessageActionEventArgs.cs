@@ -6,9 +6,9 @@ namespace Zs.Bot.Services.Messaging;
 
 public sealed class MessageActionEventArgs : EventArgs
 {
-    public required Message Message { get; init; }
-    public required Chat Chat { get; init; }
-    public required User User { get; init; }
+    public Message? Message { get; init; }
+    public Chat? Chat { get; init; }
+    public User? User { get; init; }
     public Data.Enums.ChatType ChatType { get; init; }
     public MessageAction Action { get; init; }
     public bool IsHandled { get; set; }
