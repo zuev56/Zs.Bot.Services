@@ -27,9 +27,13 @@ public sealed class CommandManager : ICommandManager
     private readonly IUserRolesRepository _userRolesRepo;
     private readonly IUsersRepository _usersRepo;
     private readonly IDbClient _dbClient;
-    private readonly IShellLauncher _shellLauncher;
     private readonly Buffer<BotCommand> _commandBuffer;
     private readonly ILogger? _logger;
+
+    // Костыль
+    private readonly string? _powershellPath;
+    private readonly string? _bashPath;
+
 
     public event EventHandler<CommandResult>? CommandCompleted;
 
@@ -38,14 +42,17 @@ public sealed class CommandManager : ICommandManager
         IUserRolesRepository userRolesRepo,
         IUsersRepository usersRepo,
         IDbClient dbClient,
-        IShellLauncher shellLauncher,
+        string? bashPath,
+        string? powershellPath,
         ILogger? logger = null)
     {
         _commandsRepo = commandsRepo;
         _userRolesRepo = userRolesRepo;
         _usersRepo = usersRepo;
         _dbClient = dbClient;
-        _shellLauncher = shellLauncher;
+        _bashPath = bashPath;
+        // Костыль
+        _powershellPath = powershellPath;
         _logger = logger;
 
         _commandBuffer = new Buffer<BotCommand>();
@@ -114,7 +121,7 @@ public sealed class CommandManager : ICommandManager
     /// <param name="botCommand"></param>
     /// <param name="cancellationToken"></param>
     /// <returns>Execution result</returns>
-    private async Task<string> RunSystemCommandAsync(Shell shell, BotCommand botCommand, CancellationToken cancellationToken = default)
+    private async Task<string> RunShellCommandAsync(Shell shell, BotCommand botCommand, CancellationToken cancellationToken = default)
     {
         // TODO: Remove code duplicates with RunSqlCommandAsync
 
@@ -139,8 +146,8 @@ public sealed class CommandManager : ICommandManager
 
                 cmdExecResult = shell switch
                 {
-                    Shell.Bash => await _shellLauncher.RunBashAsync(shellCommand, cancellationToken).ConfigureAwait(false),
-                    Shell.Pwsh => await _shellLauncher.RunPowerShellAsync(shellCommand, cancellationToken).ConfigureAwait(false),
+                    Shell.Bash => await ShellLauncher.RunAsync(_bashPath, shellCommand, cancellationToken).ConfigureAwait(false),
+                    Shell.Pwsh => await ShellLauncher.RunAsync(_powershellPath, shellCommand, cancellationToken).ConfigureAwait(false),
                     _ => throw new ArgumentOutOfRangeException()
                 };
             }
@@ -293,7 +300,7 @@ public sealed class CommandManager : ICommandManager
                 logCmdName = command.Name;
 
                 var result = Enum.TryParse(command.NameWithoutSlash.FirstCharToUpper(), out Shell shell)
-                    ? await RunSystemCommandAsync(shell, command).ConfigureAwait(false)
+                    ? await RunShellCommandAsync(shell, command).ConfigureAwait(false)
                     : await RunSqlCommandAsync(command).ConfigureAwait(false);
 
                 const int maxResultLength = 4000; // max message length for Telegram is 4096

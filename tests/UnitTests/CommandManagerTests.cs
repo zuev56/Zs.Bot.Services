@@ -32,7 +32,8 @@ public sealed class CommandManagerTests
             Mock.Of<IUserRolesRepository>(),
             Mock.Of<IUsersRepository>(),
             Mock.Of<IDbClient>(),
-            Mock.Of<IShellLauncher>());
+            "bashPath...",
+            "powershellPath/...");
     }
 
     [Theory]
