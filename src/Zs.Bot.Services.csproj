@@ -4,9 +4,8 @@
     <TargetFramework>net7.0</TargetFramework>
     <Nullable>enable</Nullable>
     <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
-    <PublishTrimmed>true</PublishTrimmed>
     <PackageId>Zs.Bot.Services</PackageId>
-    <Version>7.0.3</Version>
+    <Version>7.1.0</Version>
     <Authors>zuev56 (Sergei Zuev)</Authors>
     <Company>zuev56 (Sergei Zuev)</Company>
     <RepositoryUrl>https://github.com/zuev56/Zs.Bot.Services</RepositoryUrl>
@@ -14,18 +13,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
-      <_Parameter1>Zs.Bot.UnitTests</_Parameter1>
-    </AssemblyAttribute>
-  </ItemGroup>
-  
-  <ItemGroup>
-    <PackageReference Include="Zs.Bot.Data" Version="7.0.0" />
-    <PackageReference Include="Zs.Common.Services" Version="7.0.2" />
+    <PackageReference Include="Zs.Bot.Data" Version="7.1.0" />
+    <PackageReference Include="Zs.Common.Services" Version="7.0.3" />
   </ItemGroup>
   
   <ItemGroup>
     <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
   </ItemGroup>
 
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>$(AssemblyName).UnitTests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+  
 </Project>

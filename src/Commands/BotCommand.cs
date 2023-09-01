@@ -1,156 +1,122 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using Zs.Bot.Data.Models;
-using Zs.Bot.Services.Exceptions;
 
 namespace Zs.Bot.Services.Commands;
 
-public sealed class BotCommand
+internal sealed class BotCommand
 {
-    public int FromUserId { get; private set; }
-    public int ChatIdForAnswer { get; private init; }
-    public string Name { get; private init; } = null!;
-    public string NameWithoutSlash => Name[1..];
-    public string? TargetBotName { get; private init; }
-    public List<object> Parameters { get; } = new ();
-    public bool IsKnown { get; set; }
+    public string? BotName { get; private init; }
+    public string Command { get; private init; } = null!;
+    public CommandType Type { get; private init; }
+    public string RawParameters { get; private init; } = null!;
+    public IReadOnlyList<string> Parameters { get; private init; } = new List<string>();
 
-    private BotCommand()
+    public static BotCommand Parse(string commandText)
     {
+        ArgumentException.ThrowIfNullOrEmpty(commandText);
+
+        commandText = commandText.Trim();
+        if (!commandText.IsBotCommand())
+            throw new ArgumentException($"{nameof(commandText)} is not a BotCommand");
+
+        var command = ParseCommand(commandText);
+        var botName = ParseBotName(commandText);
+        var type = GetCommandType(command);
+        var rawParameters = GetRawParameters(commandText);
+        var parameters = ParseParametersToList(rawParameters);
+
+        return new BotCommand
+        {
+            Command = command,
+            BotName = botName,
+            Type = type,
+            RawParameters = rawParameters,
+            Parameters = parameters
+        };
     }
 
-    /// <summary> Create <see cref="BotCommand"/> from <see cref="Message"/> </summary>
-    public static BotCommand GetCommandFromMessage(Message message)
+    private static string GetRawParameters(string commandText)
     {
-        ArgumentNullException.ThrowIfNull(message);
+        var indexOfParameters = commandText.IndexOf(' ') + 1;
+        return indexOfParameters == 0
+            ? string.Empty
+            : commandText[indexOfParameters..];
+    }
 
-        if (message.Text == null || !IsCommand(message.Text))
+    private static string ParseCommand(string commandText)
+    {
+        var indexofAt = commandText.Contains('@') ? commandText.IndexOf('@') : commandText.Length;
+        var indexOfSpace = commandText.Contains(' ') ? commandText.IndexOf(' '): commandText.Length;
+        var endOfCommand = Math.Min(indexofAt, indexOfSpace);
+
+        return commandText[..endOfCommand].ToLowerInvariant();
+    }
+
+    internal static string? ParseBotName(string commandText)
+    {
+        var indexofAt = commandText.IndexOf('@');
+        var indexOfSpace = commandText.Contains(' ') ? commandText.IndexOf(' ') : commandText.Length;;
+
+        if (indexofAt < 2 || indexofAt > indexOfSpace)
+            return null;
+
+        return commandText[(indexofAt+1)..indexOfSpace].ToLowerInvariant();
+    }
+
+    private static CommandType GetCommandType(string command)
+    {
+        var type = command switch
         {
-            throw new ArgumentException("The message is not a command for a bot");
-        }
-
-        if (message.Text.Count(static c => c == '"') % 2 != 0)
-        {
-            var oddNumberOfQuotesException = new OddNumberOfQuotesException();
-            oddNumberOfQuotesException.Data.Add("Message", message);
-            throw oddNumberOfQuotesException;
-        }
-
-        var messageWords = MessageSplitter(message.Text);
-        var commandName = messageWords[0].Replace("_", "\\_").Trim().ToLower();
-        var targetBotName = default(string);
-
-        if (commandName.Contains('@'))
-        {
-            var commandNameWithTargetBotName = commandName;
-            var indexOfAt = commandNameWithTargetBotName.IndexOf('@');
-
-            commandName = commandNameWithTargetBotName[..indexOfAt];
-            targetBotName = commandNameWithTargetBotName[(indexOfAt + 1)..];
-        }
-
-        messageWords.RemoveAt(0);
-
-        var botCommand = new BotCommand
-        {
-            Name = commandName,
-            TargetBotName = targetBotName,
-            FromUserId = message.UserId,
-            ChatIdForAnswer = message.ChatId,
-            IsKnown = false
+            "/sql" => CommandType.Sql,
+            "/cli" => CommandType.Cli,
+            _ => CommandType.Default
         };
 
-        var parameters = messageWords.Cast<object>();
-        botCommand.Parameters.AddRange(parameters);
-        return botCommand;
+        return type;
     }
 
-    /// <summary> Check if message is <see cref="BotCommand"/> </summary>
-    public static bool IsCommand(string message, string? botName = null)
+    private static IReadOnlyList<string> ParseParametersToList(string commandText)
     {
-        ArgumentNullException.ThrowIfNull(message);
-
-        var text = message.Trim();
-        var isCommand = text.Length > 1 && text[0] == '/' && char.IsLetterOrDigit(text[1]);
-
-        if (isCommand && !string.IsNullOrWhiteSpace(botName) && message.Contains('@'))
-        {
-            var messageWithoutCommand = message[(message.IndexOf('@') + 1)..];
-            var botNameEndIndex = messageWithoutCommand.Contains(' ')
-                ? messageWithoutCommand.IndexOf(' ')
-                : message.Length - message.IndexOf('@') - 1;
-            var destinationBotName = messageWithoutCommand[..botNameEndIndex];
-
-            return botName == destinationBotName;
-        }
-
-        return isCommand;
-    }
-
-    private static List<string> MessageSplitter(string argumentsLine)
-    {
+        // TODO: need refactoring
         // Example: /cmd arg1 "arg 2", arg3;"arg4"
 
-        // Сначала выделяем аргументы в кавычках в отдельную группу <индекс, значение>
-        // а на их место вставляем заглушку в формате <<индекс>>
         var quotedArgs = new Dictionary<int, string>();
-
         var begIndex = -1;
-        for (var i = 0; i < argumentsLine.Length; i++)
+        for (var i = 0; i < commandText.Length; i++)
         {
-            switch (argumentsLine[i])
+            switch (commandText[i])
             {
-                // Начало составного аргумента
                 case '"' when begIndex == -1:
                     begIndex = i;
                     break;
-                // Дошли до конца составного аргумента
                 case '"' when begIndex > -1:
-                    // Добавляем значение в список
-                    quotedArgs.Add(quotedArgs.Count, argumentsLine.Substring(begIndex + 1, i - begIndex - 1));
-
-                    // Заменяем значение в строке аргументов на индекс
-                    argumentsLine = argumentsLine.Remove(begIndex, i - begIndex + 1);
-                    argumentsLine = argumentsLine.Insert(begIndex, $" <[<{quotedArgs.Count - 1}>]> ");
-
+                    var quotedArg = commandText.Substring(begIndex + 1, i - begIndex - 1);
+                    quotedArgs.Add(quotedArgs.Count, quotedArg);
+                    commandText = commandText.Remove(begIndex, i - begIndex + 1);
+                    commandText = commandText.Insert(begIndex, $" <[<{quotedArgs.Count - 1}>]> ");
                     i = begIndex;
                     begIndex = -1;
                     break;
             }
         }
 
-        // Обрабатываем строку с аргументами, будто там нет составных значений
-        var words = argumentsLine.Replace(',', ' ')
-            .Replace(';', ' ').Trim()
-            .Split(' ').ToList();
+        var args = commandText
+            .Replace(',', ' ')
+            .Replace(';', ' ')
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .ToList();
 
-        words.RemoveAll(static w => w.Trim() == "");
-
-        // Убираем лишние символы из простых аргументов
-        words.ForEach(w => w = w.Replace(",", "")
-            .Replace(";", "")
-            .Replace("-", "")
-            .Replace("=", "")
-            .Trim());
-
-        // Заменяем в массиве индексы на их значения
-        for (var i = 0; i < words.Count; i++)
+        for (var i = 0; i < args.Count; i++)
         {
-            // Получаем временный индекс
-            if (!words[i].Contains("<[<") || !words[i].Contains(">]>"))
-            {
+            if (!args[i].StartsWith("<[<") || !args[i].EndsWith(">]>"))
                 continue;
-            }
 
-            var mapIndex = int.Parse(words[i].Replace("<[<", "").Replace(">]>", ""));
-
-            // Присваиваем значение, соответствующее этому индексу
-            words[i] = quotedArgs[mapIndex];
+            var quotedArgIndexStr = args[i].Replace("<[<", "").Replace(">]>", "");
+            var quotedArgIndex = int.Parse(quotedArgIndexStr);
+            args[i] = quotedArgs[quotedArgIndex];
         }
 
-        return words;
+        return args;
     }
-
-    public override string ToString() => Name;
 }
