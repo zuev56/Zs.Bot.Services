@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
     <Nullable>enable</Nullable>
-    <Version>7.1.2</Version>
+    <Version>7.1.3</Version>
     <PackageId>Zs.Bot.Services</PackageId>
     <Authors>zuev56 (Sergei Zuev)</Authors>
     <Company>zuev56 (Sergei Zuev)</Company>
@@ -13,7 +13,7 @@
 
   <ItemGroup>
     <PackageReference Include="Zs.Bot.Data" Version="7.1.1" />
-    <PackageReference Include="Zs.Common.Services" Version="7.1.1" />
+    <PackageReference Include="Zs.Common.Services" Version="7.1.2" />
   </ItemGroup>
   
   <ItemGroup>
